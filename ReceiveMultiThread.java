@@ -37,7 +37,6 @@ public class ReceiveMultiThread implements Runnable {
                 DatagramPacket receivePacket = new DatagramPacket(message1, message1.length);
                 System.out.println("waiting to receive at port: " + socket.getLocalPort());
                 socket.receive(receivePacket);
-                System.out.println("packet received");
                 byte[] receivedData = receivePacket.getData();
 
                 String msgType = new String(Arrays.copyOfRange(receivedData, 0, 4));
