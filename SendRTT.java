@@ -32,6 +32,7 @@ public class SendRTT implements  Runnable{
                     byte[] message = preparePacket(myNode);
                     DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
                     socket.send(sendPacket);
+                    System.out.println(thisNode + " sent RTTm packet");
                 }
             }
             try {
