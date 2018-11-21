@@ -107,6 +107,7 @@ public class ReceiveMultiThread implements Runnable {
                                         InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                                         DatagramPacket sendPacket = new DatagramPacket(dataToSend, dataToSend.length, ipAddress, neighbor.getPort());
                                         socket.send(sendPacket);
+                                        System.out.println(thisNode + " sent Pdis packet");
                                     }
                                 }
 
@@ -146,6 +147,8 @@ public class ReceiveMultiThread implements Runnable {
 
                     DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, port);
                     socket.send(sendPacket);
+                    System.out.println(thisNode + " sent RTTr packet");
+
 
 
                 } else if (msgType.equals("RTTr")) {
@@ -182,6 +185,7 @@ public class ReceiveMultiThread implements Runnable {
                                 }
                                 DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, node.getPort());
                                 socket.send(sendPacket);
+                                System.out.println(thisNode + " sent RTTs packet");
                             }
                         }
                     }
@@ -282,7 +286,7 @@ public class ReceiveMultiThread implements Runnable {
 
                     DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, port);
                     socket.send(sendPacket);
-                    System.out.println("POC confirmation sent");
+                    System.out.println(thisNode + " sent POCc packet");
 
                 } else if (msgType.equals("Dhub")) {
                     eventLog.add(String.valueOf(System.currentTimeMillis()) + ": The hub node has disconnected");
@@ -299,6 +303,7 @@ public class ReceiveMultiThread implements Runnable {
                         byte[] message = prepareHeader(myNode.getName(), "RTTm");
                         DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
                         socket.send(sendPacket);
+                        System.out.println(thisNode + " sent RTTm packet");
                     }
 
                 } else if (msgType.equals("Dreg")) {
