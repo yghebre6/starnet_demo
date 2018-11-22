@@ -105,16 +105,16 @@ public class StarNode{
 
                 try {
                     socket.receive(receivePacket);
-                    System.out.println("received response");
+                    //System.out.println("received response");
                     byte[] receivedData = receivePacket.getData();
                     String msgType = new String(Arrays.copyOfRange(receivedData, 0, 4));
                     if (msgType.equals("POCc")) {
-                        System.out.println("POC confirmation received");
+                        System.out.println("message type received: POCc");
 //                      Add pocNode to knownNodes map
                         String name = new String(trim(Arrays.copyOfRange(receivedData, 30, 46)));
                         MyNode pocNode = new MyNode(name, pocIPAddress, pocPort);
                         knownNodes.put(name, pocNode);
-                        System.out.println("poc connected");
+                        //System.out.println("poc connected");
 
 
                         //pack knownNodes into proper format
@@ -161,7 +161,7 @@ public class StarNode{
                         }
 
 
-                        System.out.println("break");
+                        //System.out.println("break");
                         socket.setSoTimeout(0);
                         break;
                     }

@@ -29,7 +29,7 @@ public class ReceiveMultiThread implements Runnable {
     public void run() {
         try {
 
-            System.out.println("receive thread started");
+            //System.out.println("receive thread started");
             while (true) {
 
                 //receive packet
@@ -186,6 +186,26 @@ public class ReceiveMultiThread implements Runnable {
                                 socket.send(sendPacket);
                                 System.out.println(thisNode + " sent RTTs packet");
                             }
+                        }
+
+                        //if its own rttsum was the last it needed, begin send content thread
+                        if (rttSums.size() == knownNodes.size()) {
+//                      find the node with the smallest rtt sum
+                            long min = Long.MAX_VALUE;
+                            MyNode minNode = null;
+                            for (String nodeName : knownNodes.keySet()) {
+                                if (rttSums.get(nodeName) < min) {
+                                    min = rttSums.get(nodeName);
+                                    minNode = knownNodes.get(nodeName);
+                                }
+                            }
+                            hub.setName(minNode.getName());
+                            hub.setIp(minNode.getIP());
+                            hub.setPort(minNode.getPort());
+
+                            Thread sendContent = new Thread(new SendContent(thisNode, socket, knownNodes, hub, rttVector, eventLog));
+                            sendContent.start();
+
                         }
                     }
 
