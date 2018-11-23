@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 public class SendRTT implements  Runnable{
@@ -13,17 +14,25 @@ public class SendRTT implements  Runnable{
     private Map<String, MyNode> knownNodes;
     DatagramSocket socket;
     private ArrayList<String> eventLog;
+    private Map<String, Long> rttVector;
+    private Map<String, Long> rttSums = new HashMap<>();
 
-    public SendRTT(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, ArrayList<String> eventLog) {
+    public SendRTT(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, ArrayList<String> eventLog,
+                   Map<String, Long> rttVector, Map<String, Long> rttSums) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
         this.eventLog = eventLog;
+        this.rttVector = rttVector;
+        this.rttSums = rttSums;
     }
 
     public void run() {
 
         try {
+            rttVector = new HashMap<>();
+            rttSums = new HashMap<>();
+
             for (String name : knownNodes.keySet()) {
                 if (!name.equals(thisNode)) {
                     MyNode myNode = knownNodes.get(name);

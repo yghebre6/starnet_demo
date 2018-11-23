@@ -21,7 +21,7 @@ public class TaskHandler implements Runnable{
 
 
     public TaskHandler(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, MyNode hub,
-                              Map<String, Long> rttVector, ArrayList<String> eventLog, Stack<DatagramPacket> buffer ) {
+                              Map<String, Long> rttVector, ArrayList<String> eventLog, Stack<DatagramPacket> buffer, Map<String, Long> rttSums ) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
@@ -29,6 +29,7 @@ public class TaskHandler implements Runnable{
         this.rttVector = rttVector;
         this.eventLog = eventLog;
         this.buffer = buffer;
+        this.rttSums = rttSums;
     }
 
     @Override
@@ -130,7 +131,7 @@ public class TaskHandler implements Runnable{
                                 }
                             }
 
-                            Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog));
+                            Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums));
                             sendRTT.start();
 
 
@@ -210,8 +211,7 @@ public class TaskHandler implements Runnable{
                                 hub.setIp(minNode.getIP());
                                 hub.setPort(minNode.getPort());
 
-                                Thread sendContent = new Thread(new SendContent(thisNode, socket, knownNodes, hub, rttVector, eventLog));
-                                sendContent.start();
+                                System.out.println("enter command bruh");
 
                             }
                         }
@@ -240,8 +240,7 @@ public class TaskHandler implements Runnable{
                             hub.setIp(minNode.getIP());
                             hub.setPort(minNode.getPort());
 
-                            Thread sendContent = new Thread(new SendContent(thisNode, socket, knownNodes, hub, rttVector, eventLog));
-                            sendContent.start();
+                            System.out.println("bruhhh enter command");
 
                         }
                     } else if (msgType.equals("Mfil")) {

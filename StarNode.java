@@ -13,6 +13,7 @@ public class StarNode{
     static Map<String, MyNode> knownNodes = new HashMap<String, MyNode>();
     static MyNode hub = new MyNode(null, null, 0);
     static Map<String, Long> rttVector = new HashMap<>();
+    static Map<String, Long> rttSums = new HashMap<>();
     static ArrayList<String> eventLog = new ArrayList<>();
 
     public static void main(String[] args) throws Exception{
@@ -40,8 +41,11 @@ public class StarNode{
             }
 
             //Receiving Messages Thread - Omega
-            Thread receiveThread = new Thread(new ReceiveMultiThread(nodeName, socket, knownNodes, hub, rttVector, eventLog));
+            Thread receiveThread = new Thread(new ReceiveMultiThread(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums));
             receiveThread.start();
+
+            Thread sendContent = new Thread(new SendContent(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums));
+            sendContent.start();
 
 
 //            Thread.sleep(10000);
