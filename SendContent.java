@@ -136,7 +136,7 @@ public class SendContent implements Runnable{
 
                         for (String nodeName : knownNodes.keySet()) {
                             if(!thisNode.equals(nodeName)) {
-                                System.out.println(nodeName + " is " + rttVector.get(nodeName) + " seconds away");
+                                System.out.println(nodeName + " is " + rttVector.get(nodeName) + " nanoseconds away");
                             }
                         }
                         System.out.println("\n" + hub.getName() + " is the hub.");
