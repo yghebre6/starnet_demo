@@ -54,7 +54,11 @@ public class TaskHandler implements Runnable{
                     byte[] destNameBytes = trim(Arrays.copyOfRange(receivedData, 46, 62));
                     String destName = new String(destNameBytes);
 
-                    System.out.println("message type received: " + msgType + " from " + senderName);
+                    if(msgType.equals("RTTr")) {
+                        System.out.println("message type received: " + msgType + " from " + destName);
+                    } else {
+                        System.out.println("message type received: " + msgType + " from " + senderName);
+                    }
 
                     if (msgType.equals("Pdis")) {
 
@@ -150,7 +154,7 @@ public class TaskHandler implements Runnable{
 
                         DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, port);
                         socket.send(sendPacket);
-                        System.out.println(thisNode + " sent RTTr packet to " + thisNode);
+                        System.out.println(thisNode + " sent RTTr packet to " + senderName);
 
 
                     } else if (msgType.equals("RTTr")) {
@@ -187,7 +191,7 @@ public class TaskHandler implements Runnable{
                                     }
                                     DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, node.getPort());
                                     socket.send(sendPacket);
-                                    System.out.println(thisNode + " sent RTTs packet to " + senderName);
+                                    System.out.println(thisNode + " sent RTTs packet to " + node.getName());
                                 }
                             }
 
@@ -296,8 +300,6 @@ public class TaskHandler implements Runnable{
                         System.out.println("enter command");
 
                     } else if (msgType.equals("POCr")) {
-
-                        System.out.println("POC connect message received");
 
 //                  read source star node name from messageBytes
                         byte[] message = prepareHeader(senderName, "POCc");

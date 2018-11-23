@@ -148,7 +148,7 @@ public class StarNode{
 
                                     DatagramPacket sendPacket2 = new DatagramPacket(dataToSend, dataToSend.length, ipAddress, neighbor.getPort());
                                     socket.send(sendPacket2);
-                                    System.out.println(currentNode.getName() + " sent Pdis packet");
+                                    System.out.println(currentNode.getName() + " sent Pdis packet to " + neighbor.getName());
                                 }
                             }
 

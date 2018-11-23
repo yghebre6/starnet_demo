@@ -40,6 +40,7 @@ public class SendContent implements Runnable{
             try {
                 while (true) {
                     System.out.println("enter command");
+                    System.out.println("hub is " + hub.getName());
                     Scanner scanner = new Scanner(System.in);
                     String request = scanner.nextLine();
                     if (request.contains("send")) {
