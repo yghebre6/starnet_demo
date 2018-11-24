@@ -15,6 +15,7 @@ public class TaskHandler implements Runnable{
     private Map<String, Long> rttVector;
     private Map<String, Long> rttSums = new HashMap<>();
     private ArrayList<String> eventLog;
+    private int maxNodes;
 
     private Stack<DatagramPacket> buffer;
     private HashMap<String, Boolean> keepAliveMap;
@@ -22,7 +23,7 @@ public class TaskHandler implements Runnable{
 
 
     public TaskHandler(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, MyNode hub,
-                              Map<String, Long> rttVector, ArrayList<String> eventLog, Stack<DatagramPacket> buffer, Map<String, Long> rttSums ) {
+                              Map<String, Long> rttVector, ArrayList<String> eventLog, Stack<DatagramPacket> buffer, Map<String, Long> rttSums, int maxNodes) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
@@ -32,6 +33,7 @@ public class TaskHandler implements Runnable{
         this.buffer = buffer;
         this.rttSums = rttSums;
         keepAliveMap = new HashMap<>();
+        this.maxNodes = maxNodes;
     }
 
     @Override
@@ -131,10 +133,12 @@ public class TaskHandler implements Runnable{
                                         // ignore close exception
                                     }
                                 }
-                            }
 
-                            Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums));
-                            sendRTT.start();
+                                if (knownNodes.size() == maxNodes) {
+                                    Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums));
+                                    sendRTT.start();
+                                }
+                            }
 
 
                         } catch (ClassNotFoundException e) {
@@ -330,19 +334,9 @@ public class TaskHandler implements Runnable{
                         hub.setName("null");
                         hub.setPort(0);
 
-                        //recalculate RTT by sending RTTm msg to all knownNodes
-                        for (String name : knownNodes.keySet()) {
-                            if (!name.equals(thisNode)) {
-                                MyNode myNode = knownNodes.get(name);
-
-                                byte[] ipAsByteArr = convertIPtoByteArr(myNode.getIP());
-                                InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
-                                byte[] message = prepareHeader(myNode.getName(), "RTTm");
-                                DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
-                                socket.send(sendPacket);
-                                System.out.println(thisNode + " sent RTTm packet to " + name);
-                            }
-                        }
+                        //recalculate RTT and collectively find new hub
+                        Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums));
+                        sendRTT.start();
 
                     } else if (msgType.equals("Dreg")) {
                         eventLog.add(String.valueOf(System.currentTimeMillis()) + ": A non-hub node has disconnected");

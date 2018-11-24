@@ -37,11 +37,11 @@ public class StarNode{
             DatagramSocket socket = new DatagramSocket(localPort, InetAddress.getLocalHost());
 
             if(pocPort != 0 && !pocIPAddress.equals("0")) {
-                connectToPOC(currentNode, pocIPAddress, pocPort, socket);
+                connectToPOC(currentNode, pocIPAddress, pocPort, socket, maxNodes);
             }
 
             //Receiving Messages Thread - Omega
-            Thread receiveThread = new Thread(new ReceiveMultiThread(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums));
+            Thread receiveThread = new Thread(new ReceiveMultiThread(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums, maxNodes));
             receiveThread.start();
 
             Thread sendContent = new Thread(new SendContent(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums));
@@ -68,7 +68,7 @@ public class StarNode{
         }
     }
 
-    public static void connectToPOC(MyNode currentNode, String pocIPAddress, int pocPort, DatagramSocket socket) {
+    public static void connectToPOC(MyNode currentNode, String pocIPAddress, int pocPort, DatagramSocket socket, int maxNodes) {
 
         try {
 
@@ -164,6 +164,10 @@ public class StarNode{
                             }
                         }
 
+                        if (knownNodes.size() == maxNodes) {
+                            Thread sendRTT = new Thread(new SendRTT(currentNode.getName(), socket, knownNodes, eventLog, rttVector, rttSums));
+                            sendRTT.start();
+                        }
 
                         //System.out.println("break");
                         socket.setSoTimeout(0);

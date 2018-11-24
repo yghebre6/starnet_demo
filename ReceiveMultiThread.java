@@ -14,12 +14,12 @@ public class ReceiveMultiThread implements Runnable {
     private Map<String, Long> rttVector;
     private Map<String, Long> rttSums = new HashMap<>();
     private ArrayList<String> eventLog;
-
+    private int maxNodes;
 
 
 
     public ReceiveMultiThread(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, MyNode hub,
-                              Map<String, Long> rttVector, ArrayList<String> eventLog, Map<String, Long> rttSums) {
+                              Map<String, Long> rttVector, ArrayList<String> eventLog, Map<String, Long> rttSums, int maxNodes) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
@@ -27,6 +27,7 @@ public class ReceiveMultiThread implements Runnable {
         this.rttVector = rttVector;
         this.eventLog = eventLog;
         this.rttSums = rttSums;
+        this.maxNodes = maxNodes;
     }
 
     public void run() {
@@ -34,7 +35,7 @@ public class ReceiveMultiThread implements Runnable {
         Stack<DatagramPacket> buffer = new Stack<>();
 
 
-        Thread taskHandler = new Thread(new TaskHandler(thisNode, socket, knownNodes, hub, rttVector, eventLog, buffer, rttSums));
+        Thread taskHandler = new Thread(new TaskHandler(thisNode, socket, knownNodes, hub, rttVector, eventLog, buffer, rttSums, maxNodes));
         taskHandler.start();
 
         try {
