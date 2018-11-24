@@ -17,6 +17,7 @@ public class TaskHandler implements Runnable{
     private ArrayList<String> eventLog;
 
     private Stack<DatagramPacket> buffer;
+    private HashMap<String, Boolean> keepAliveMap;
 
 
 
@@ -30,6 +31,7 @@ public class TaskHandler implements Runnable{
         this.eventLog = eventLog;
         this.buffer = buffer;
         this.rttSums = rttSums;
+        keepAliveMap = new HashMap<>();
     }
 
     @Override
@@ -213,6 +215,10 @@ public class TaskHandler implements Runnable{
 
                                 System.out.println("enter command bruh");
 
+                                Thread sendKeepAlive = new Thread(new SendKA(thisNode, socket, knownNodes, eventLog,
+                                        keepAliveMap, rttVector, rttSums, hub));
+                                sendKeepAlive.start();
+
                             }
                         }
 
@@ -239,6 +245,10 @@ public class TaskHandler implements Runnable{
                             hub.setName(minNode.getName());
                             hub.setIp(minNode.getIP());
                             hub.setPort(minNode.getPort());
+
+                            Thread sendKeepAlive = new Thread(new SendKA(thisNode, socket, knownNodes, eventLog,
+                                    keepAliveMap, rttVector, rttSums, hub));
+                            sendKeepAlive.start();
 
                             System.out.println("bruhhh enter command");
 
@@ -316,17 +326,22 @@ public class TaskHandler implements Runnable{
                         knownNodes.remove(senderName);
                         rttVector.remove(senderName);
                         rttSums.remove(senderName);
+                        hub.setIp("null");
+                        hub.setName("null");
+                        hub.setPort(0);
 
                         //recalculate RTT by sending RTTm msg to all knownNodes
                         for (String name : knownNodes.keySet()) {
-                            MyNode myNode = knownNodes.get(name);
+                            if (!name.equals(thisNode)) {
+                                MyNode myNode = knownNodes.get(name);
 
-                            byte[] ipAsByteArr = convertIPtoByteArr(myNode.getIP());
-                            InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
-                            byte[] message = prepareHeader(myNode.getName(), "RTTm");
-                            DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
-                            socket.send(sendPacket);
-                            System.out.println(thisNode + " sent RTTm packet to " + name);
+                                byte[] ipAsByteArr = convertIPtoByteArr(myNode.getIP());
+                                InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
+                                byte[] message = prepareHeader(myNode.getName(), "RTTm");
+                                DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
+                                socket.send(sendPacket);
+                                System.out.println(thisNode + " sent RTTm packet to " + name);
+                            }
                         }
 
                     } else if (msgType.equals("Dreg")) {
@@ -335,6 +350,24 @@ public class TaskHandler implements Runnable{
                         knownNodes.remove(senderName);
                         rttVector.remove(senderName);
                         rttSums.remove(senderName);
+
+                    } else if (msgType.equals("Kpro")) {
+                        //respond back with "Kcon"
+                        receivedData[1] = 'c';
+                        receivedData[2] = 'o';
+                        receivedData[3] = 'n';
+
+                        // read star node name from messageBytes to get IP and port
+                        byte[] ipAsByteArr = convertIPtoByteArr(knownNodes.get(senderName).getIP());
+                        InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
+                        int port = knownNodes.get(senderName).getPort();
+
+                        DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, port);
+                        socket.send(sendPacket);
+                        System.out.println(thisNode + " sent Kcon packet to " + senderName);
+
+                    } else if (msgType.equals("Kcon")) {
+                        keepAliveMap.put(destName, true);
                     }
                 } catch (Exception e) {
 
