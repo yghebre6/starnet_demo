@@ -201,7 +201,7 @@ public class TaskHandler implements Runnable{
                         rttVector.put(senderName, rtt);
 
 //                  if rtt is received from every node in knownNodes list minus itself
-                        if (rttVector.size() == maxNodes - 1) {
+                        if (rttVector.size() == knownNodes.size() - 1) {
 
 //                      find rttSum of this node
                             long rttSum = 0;
