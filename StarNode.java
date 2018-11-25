@@ -3,10 +3,8 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class StarNode{
 
@@ -15,6 +13,10 @@ public class StarNode{
     static Map<String, Long> rttVector = new HashMap<>();
     static Map<String, Long> rttSums = new HashMap<>();
     static ArrayList<String> eventLog = new ArrayList<>();
+    static ConcurrentLinkedQueue<DatagramPacket> sendBuffer = new ConcurrentLinkedQueue<>();
+    static ConcurrentLinkedQueue<DatagramPacket> receiveBuffer = new ConcurrentLinkedQueue<>();
+    static DatagramPacket ackMessage;
+
 
     public static void main(String[] args) throws Exception{
 
@@ -41,11 +43,17 @@ public class StarNode{
             }
 
             //Receiving Messages Thread - Omega
-            Thread receiveThread = new Thread(new ReceiveMultiThread(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums, maxNodes));
+            Thread receiveThread = new Thread(new IncomingPackets(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums, maxNodes, receiveBuffer));
             receiveThread.start();
 
-            Thread sendContent = new Thread(new SendContent(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums));
+            Thread taskHandler = new Thread(new TaskHandler(nodeName, socket, knownNodes, hub, rttVector, eventLog, receiveBuffer, rttSums, maxNodes, sendBuffer, ackMessage));
+            taskHandler.start();
+
+            Thread sendContent = new Thread(new SendContent(nodeName, socket, knownNodes, hub, rttVector, eventLog, rttSums, sendBuffer));
             sendContent.start();
+
+            Thread sendThread = new Thread(new OutgoingPackets(socket, knownNodes, sendBuffer, ackMessage));
+            sendThread.start();
 
 
 //            Thread.sleep(10000);
@@ -165,7 +173,7 @@ public class StarNode{
                         }
 
                         if (knownNodes.size() == maxNodes) {
-                            Thread sendRTT = new Thread(new SendRTT(currentNode.getName(), socket, knownNodes, eventLog, rttVector, rttSums));
+                            Thread sendRTT = new Thread(new SendRTT(currentNode.getName(), socket, knownNodes, eventLog, rttVector, rttSums, sendBuffer));
                             sendRTT.start();
                         }
 

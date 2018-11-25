@@ -8,8 +8,10 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SendContent implements Runnable{
 
@@ -21,11 +23,13 @@ public class SendContent implements Runnable{
     private ArrayList<String> eventLog;
     private int maxNodes;
     private Map<String, Long> rttSums;
+    private ConcurrentLinkedQueue<DatagramPacket> sendBuffer;
 
 
 
     public SendContent(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, MyNode hub,
-                       Map<String, Long> rttVector, ArrayList<String> eventLog, Map<String, Long> rttSums) {
+                       Map<String, Long> rttVector, ArrayList<String> eventLog, Map<String, Long> rttSums,
+                       ConcurrentLinkedQueue<DatagramPacket> sendBuffer) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
@@ -34,6 +38,7 @@ public class SendContent implements Runnable{
         this.eventLog = eventLog;
         this.maxNodes = maxNodes;
         this.rttSums = rttSums;
+        this.sendBuffer = sendBuffer;
     }
 
     public void run() {
@@ -68,7 +73,7 @@ public class SendContent implements Runnable{
                         byte[] ipAsByteArr = convertIPtoByteArr(hub.getIP());
                         InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                         DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, hub.getPort());
-                        socket.send(sendPacket);
+                        sendBuffer.add(sendPacket);
                     }
                     //if file message
                     else {
@@ -118,7 +123,7 @@ public class SendContent implements Runnable{
                             byte[] ipAsByteArr = convertIPtoByteArr(hub.getIP());
                             InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                             DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, hub.getPort());
-                            socket.send(sendPacket);
+                            sendBuffer.add(sendPacket);
 
                         } catch (FileNotFoundException e) {
                             System.out.println("File Not Found.");
@@ -136,7 +141,7 @@ public class SendContent implements Runnable{
                     System.out.println("\nActive Nodes in the network: ");
 
                     for(String nodeName : rttSums.keySet()) {
-                        System.out.println(nodeName + " has a rttsum of " + rttSums.get(nodeName));
+                        System.out.println(nodeName + " has a rttsum of " + rttSums.get(nodeName) + " ms");
                     }
 //
 //
@@ -157,7 +162,7 @@ public class SendContent implements Runnable{
                                 byte[] ipAsByteArr = convertIPtoByteArr(neighbor.getIP());
                                 InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                                 DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, neighbor.getPort());
-                                socket.send(sendPacket);
+                                sendBuffer.add(sendPacket);
                             }
                         }
                     } else {
@@ -169,7 +174,7 @@ public class SendContent implements Runnable{
                                 byte[] ipAsByteArr = convertIPtoByteArr(neighbor.getIP());
                                 InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                                 DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, neighbor.getPort());
-                                socket.send(sendPacket);
+                                sendBuffer.add(sendPacket);
                             }
                         }
                     }

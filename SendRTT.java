@@ -6,7 +6,9 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SendRTT implements  Runnable{
 
@@ -16,15 +18,17 @@ public class SendRTT implements  Runnable{
     private ArrayList<String> eventLog;
     private Map<String, Long> rttVector;
     private Map<String, Long> rttSums = new HashMap<>();
+    private ConcurrentLinkedQueue<DatagramPacket> sendBuffer;
 
     public SendRTT(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, ArrayList<String> eventLog,
-                   Map<String, Long> rttVector, Map<String, Long> rttSums) {
+                   Map<String, Long> rttVector, Map<String, Long> rttSums, ConcurrentLinkedQueue<DatagramPacket> sendBuffer) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
         this.eventLog = eventLog;
         this.rttVector = rttVector;
         this.rttSums = rttSums;
+        this.sendBuffer = sendBuffer;
     }
 
     public void run() {
@@ -40,7 +44,7 @@ public class SendRTT implements  Runnable{
                     InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                     byte[] message = preparePacket(myNode);
                     DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
-                    socket.send(sendPacket);
+                    sendBuffer.add(sendPacket);
                     System.out.println(thisNode + " sent RTTm packet to " + myNode.getName());
                 }
             }

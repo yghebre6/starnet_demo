@@ -5,6 +5,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,9 +20,11 @@ public class SendKA implements Runnable {
     private Map<String, Long> rttVector;
     private Map<String, Long> rttSums;
     private MyNode hub;
+    private ConcurrentLinkedQueue<DatagramPacket> sendBuffer;
 
     public SendKA(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, ArrayList<String> eventLog,
-                  HashMap<String, Boolean> keepAliveMap, Map<String, Long> rttVector, Map<String, Long> rttSums, MyNode hub) {
+                  HashMap<String, Boolean> keepAliveMap, Map<String, Long> rttVector, Map<String, Long> rttSums,
+                  MyNode hub, ConcurrentLinkedQueue<DatagramPacket> sendBuffer) {
 
         this.thisNode = thisNode;
         this.socket = socket;
@@ -31,6 +34,7 @@ public class SendKA implements Runnable {
         this.rttVector = rttVector;
         this.rttSums = rttSums;
         this.hub = hub;
+        this.sendBuffer = sendBuffer;
     }
 
     public void run(){
@@ -57,12 +61,12 @@ public class SendKA implements Runnable {
                     InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                     byte[] message = preparePacket(neighborNode);
                     DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, neighborNode.getPort());
-                    socket.send(sendPacket);
+                    sendBuffer.add(sendPacket);
                     System.out.println(thisNode + " sent Keep Alive packet to " + neighborNode.getName());
                 }
             }
             try {
-                TimeUnit.SECONDS.sleep(5);
+                TimeUnit.SECONDS.sleep(14);
             }  catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             }
@@ -113,23 +117,8 @@ public class SendKA implements Runnable {
         hub.setName("null");
         hub.setPort(0);
 
-        try {
-            //recalculate RTT by sending RTTm msg to all knownNodes
-            for (String name : knownNodes.keySet()) {
-                if (!name.equals(thisNode)) {
-                    MyNode myNode = knownNodes.get(name);
-
-                    byte[] ipAsByteArr = convertIPtoByteArr(myNode.getIP());
-                    InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
-                    byte[] message = prepareHeader(myNode.getName(), "RTTm");
-                    DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, myNode.getPort());
-                    socket.send(sendPacket);
-                    System.out.println(thisNode + " sent RTTm packet to " + name);
-                }
-            }
-        } catch (Exception e) {
-
-        }
+        Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums, sendBuffer));
+        sendRTT.start();
     }
 
 

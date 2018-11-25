@@ -5,6 +5,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 
 public class TaskHandler implements Runnable{
 
@@ -16,24 +18,28 @@ public class TaskHandler implements Runnable{
     private Map<String, Long> rttSums = new HashMap<>();
     private ArrayList<String> eventLog;
     private int maxNodes;
-
-    private Stack<DatagramPacket> buffer;
+    private ConcurrentLinkedQueue<DatagramPacket> sendBuffer;
+    private ConcurrentLinkedQueue<DatagramPacket> receiveBuffer;
     private HashMap<String, Boolean> keepAliveMap;
+    private DatagramPacket ackMessageFromReceiever;
 
 
 
     public TaskHandler(String thisNode, DatagramSocket socket, Map<String, MyNode> knownNodes, MyNode hub,
-                              Map<String, Long> rttVector, ArrayList<String> eventLog, Stack<DatagramPacket> buffer, Map<String, Long> rttSums, int maxNodes) {
+                              Map<String, Long> rttVector, ArrayList<String> eventLog, ConcurrentLinkedQueue<DatagramPacket> receiveBuffer,
+                       Map<String, Long> rttSums, int maxNodes, ConcurrentLinkedQueue<DatagramPacket> sendBuffer, DatagramPacket ackMessageFromReceiever) {
         this.thisNode = thisNode;
         this.socket = socket;
         this.knownNodes = knownNodes;
         this.hub = hub;
         this.rttVector = rttVector;
         this.eventLog = eventLog;
-        this.buffer = buffer;
+        this.receiveBuffer = receiveBuffer;
         this.rttSums = rttSums;
         keepAliveMap = new HashMap<>();
         this.maxNodes = maxNodes;
+        this.sendBuffer = sendBuffer;
+        this.ackMessageFromReceiever = ackMessageFromReceiever;
     }
 
     @Override
@@ -41,9 +47,9 @@ public class TaskHandler implements Runnable{
 
         while (true) {
 
-            if (!buffer.empty()) {
+            if (receiveBuffer.size() != 0) {
 
-                DatagramPacket receivePacket = buffer.pop();
+                DatagramPacket receivePacket = receiveBuffer.remove();
 
 
                 try {
@@ -59,11 +65,34 @@ public class TaskHandler implements Runnable{
                     byte[] destNameBytes = trim(Arrays.copyOfRange(receivedData, 46, 62));
                     String destName = new String(destNameBytes);
 
-                    if(msgType.equals("RTTr")) {
-                        System.out.println("message type received: " + msgType + " from " + destName);
-                    } else {
-                        System.out.println("message type received: " + msgType + " from " + senderName);
-                    }
+
+//                    //Send ACK packet
+//                    MyNode destNode = knownNodes.get(senderName);
+//                    byte[] destIP = convertIPtoByteArr(destNode.getIP());
+//                    InetAddress destIPAddress = InetAddress.getByAddress(destIP);
+//                    byte[] ackMsg = prepareHeader(destNode.getName(), "ACKm");
+//                    //Set sequence number
+//                    ackMsg[4] = receivedData[4];
+//                    DatagramPacket ackPacket = new DatagramPacket(ackMsg, ackMsg.length, destIPAddress, destNode.getPort());
+//                    sendBuffer.add(ackPacket);
+
+
+                    //if we receive a regular packet (not ack)
+                    //send off an ack packet w matching seq num (via send buffer)
+//                    if (!msgType.equals("ACKm")) {
+//                        InetAddress destIPAddress = receivePacket.getAddress();
+//                        byte[] ackMsg = prepareHeader(senderName, "ACKm");
+//                        //Set sequence number
+//                        ackMsg[4] = receivedData[4];
+//                        DatagramPacket ackPacket = new DatagramPacket(ackMsg, ackMsg.length, destIPAddress, receivePacket.getPort());
+//                        sendBuffer.add(ackPacket);
+//                    }
+
+
+
+
+
+
 
                     if (msgType.equals("Pdis")) {
 
@@ -121,8 +150,7 @@ public class TaskHandler implements Runnable{
                                             byte[] ipAsByteArr = convertIPtoByteArr(neighbor.getIP());
                                             InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                                             DatagramPacket sendPacket = new DatagramPacket(dataToSend, dataToSend.length, ipAddress, neighbor.getPort());
-                                            socket.send(sendPacket);
-                                            System.out.println(thisNode + " sent Pdis packet to " + name);
+                                            sendBuffer.add(sendPacket);
                                         }
                                     }
 
@@ -135,7 +163,7 @@ public class TaskHandler implements Runnable{
                                 }
 
                                 if (knownNodes.size() == maxNodes) {
-                                    Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums));
+                                    Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums, sendBuffer));
                                     sendRTT.start();
                                 }
                             }
@@ -151,17 +179,17 @@ public class TaskHandler implements Runnable{
                     } else if (msgType.equals("RTTm")) {
                         eventLog.add(String.valueOf(System.currentTimeMillis()) + ": An RTT request has been received");
 
-//                  change RTTm to RTTr
-                        receivedData[3] = 'r';
+                        byte[] message = prepareHeader(senderName, "RTTr");
 
-//                  read star node name from messageBytes to get IP and port
-                        byte[] ipAsByteArr = convertIPtoByteArr(knownNodes.get(senderName).getIP());
-                        InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
-                        int port = knownNodes.get(senderName).getPort();
+                        byte[] timeSentBytes = Arrays.copyOfRange(receivedData, 62, 70);
+//                      start of body
+                        int index = 62;
+                        for (int i = 0; i < timeSentBytes.length; i++) {
+                            message[index++] = timeSentBytes[i];
+                        }
 
-                        DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, port);
-                        socket.send(sendPacket);
-                        System.out.println(thisNode + " sent RTTr packet to " + senderName);
+                        DatagramPacket sendPacket = new DatagramPacket(message, message.length, receivePacket.getAddress(), receivePacket.getPort());
+                        sendBuffer.add(sendPacket);
 
 
                     } else if (msgType.equals("RTTr")) {
@@ -170,10 +198,10 @@ public class TaskHandler implements Runnable{
                         long timeReceived = System.currentTimeMillis();
                         long timeSent = ByteBuffer.wrap(Arrays.copyOfRange(receivedData, 62, 70)).getLong();
                         long rtt = timeReceived - timeSent;
-                        rttVector.put(destName, rtt);
+                        rttVector.put(senderName, rtt);
 
 //                  if rtt is received from every node in knownNodes list minus itself
-                        if (rttVector.size() == knownNodes.size() - 1) {
+                        if (rttVector.size() == maxNodes - 1) {
 
 //                      find rttSum of this node
                             long rttSum = 0;
@@ -197,8 +225,7 @@ public class TaskHandler implements Runnable{
                                         message[index++] = rttSumBytes[i];
                                     }
                                     DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, node.getPort());
-                                    socket.send(sendPacket);
-                                    System.out.println(thisNode + " sent RTTs packet to " + node.getName());
+                                    sendBuffer.add(sendPacket);
                                 }
                             }
 
@@ -220,7 +247,7 @@ public class TaskHandler implements Runnable{
                                 System.out.println("enter command bruh");
 
                                 Thread sendKeepAlive = new Thread(new SendKA(thisNode, socket, knownNodes, eventLog,
-                                        keepAliveMap, rttVector, rttSums, hub));
+                                        keepAliveMap, rttVector, rttSums, hub, sendBuffer));
                                 sendKeepAlive.start();
 
                             }
@@ -251,7 +278,7 @@ public class TaskHandler implements Runnable{
                             hub.setPort(minNode.getPort());
 
                             Thread sendKeepAlive = new Thread(new SendKA(thisNode, socket, knownNodes, eventLog,
-                                    keepAliveMap, rttVector, rttSums, hub));
+                                    keepAliveMap, rttVector, rttSums, hub, sendBuffer));
                             sendKeepAlive.start();
 
                             System.out.println("bruhhh enter command");
@@ -283,7 +310,7 @@ public class TaskHandler implements Runnable{
                                     byte[] ipAsByteArr = convertIPtoByteArr(neighbor.getIP());
                                     InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                                     DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, neighbor.getPort());
-                                    socket.send(sendPacket);
+                                    sendBuffer.add(sendPacket);
                                 }
                             }
                         }
@@ -305,7 +332,7 @@ public class TaskHandler implements Runnable{
                                     byte[] ipAsByteArr = convertIPtoByteArr(neighbor.getIP());
                                     InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                                     DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, neighbor.getPort());
-                                    socket.send(sendPacket);
+                                    sendBuffer.add(sendPacket);
                                 }
                             }
                         }
@@ -322,9 +349,7 @@ public class TaskHandler implements Runnable{
                         int port = ByteBuffer.wrap(Arrays.copyOfRange(receivedData, 66, 70)).getInt();
 
                         DatagramPacket sendPacket = new DatagramPacket(message, message.length, ipAddress, port);
-                        socket.send(sendPacket);
-                        System.out.println(thisNode + " sent POCc packet to " + senderName);
-
+                        sendBuffer.add(sendPacket);
                     } else if (msgType.equals("Dhub")) {
                         eventLog.add(String.valueOf(System.currentTimeMillis()) + ": The hub node has disconnected");
                         knownNodes.remove(senderName);
@@ -335,7 +360,7 @@ public class TaskHandler implements Runnable{
                         hub.setPort(0);
 
                         //recalculate RTT and collectively find new hub
-                        Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums));
+                        Thread sendRTT = new Thread(new SendRTT(thisNode, socket, knownNodes, eventLog, rttVector, rttSums, sendBuffer));
                         sendRTT.start();
 
                     } else if (msgType.equals("Dreg")) {
@@ -357,12 +382,17 @@ public class TaskHandler implements Runnable{
                         int port = knownNodes.get(senderName).getPort();
 
                         DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, port);
-                        socket.send(sendPacket);
-                        System.out.println(thisNode + " sent Kcon packet to " + senderName);
-
+                        sendBuffer.add(sendPacket);
                     } else if (msgType.equals("Kcon")) {
                         keepAliveMap.put(destName, true);
+
+                    } else if (msgType.equals("ACKm")){
+                        ackMessageFromReceiever = receivePacket;
+
+
                     }
+
+
                 } catch (Exception e) {
 
                 }
