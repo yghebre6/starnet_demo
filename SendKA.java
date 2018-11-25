@@ -74,9 +74,6 @@ public class SendKA implements Runnable {
         } catch (UnknownHostException e) {
             System.out.println(e.getMessage());
             System.exit(0);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-            System.exit(0);
         }
 
         //check if all responded

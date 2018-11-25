@@ -57,9 +57,6 @@ public class SendRTT implements  Runnable{
         } catch (UnknownHostException e) {
             System.out.println(e.getMessage());
             System.exit(0);
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-            System.exit(0);
         }
     }
 
