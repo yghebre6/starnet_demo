@@ -25,192 +25,34 @@ public class OutgoingPackets implements Runnable{
     }
 
     public void run() {
-        try {
-            DatagramPacket sendPacket;
+            DatagramPacket packetToSend;
 
             while (true) {
                 if (!sendBuffer.isEmpty()) {
 
-                    sendPacket = sendBuffer.remove();
-                    byte[] receivedData = sendPacket.getData();
-                    String msgType = new String(Arrays.copyOfRange(receivedData, 0, 4));
-                    byte[] senderNameBytes = trim(Arrays.copyOfRange(receivedData, 30, 46));
-                    String senderName = new String(senderNameBytes);
-                    byte[] destNameBytes = trim(Arrays.copyOfRange(receivedData, 46, 62));
-                    String destName = new String(destNameBytes);
-
-                    socket.send(sendPacket);
-                    System.out.println(senderName + " sent " + msgType + " packet to " + destName);
+                    packetToSend = sendBuffer.remove();
+                    sendPacket(packetToSend);
                 }
             }
 
 
+    }
 
-//            DatagramPacket nextPacketInBuffer;
-//            DatagramPacket currentPacket;
-//            DatagramPacket lastPacketSent = new DatagramPacket(null, 0, null, 0);;
-//            byte[] sendData;
-//            boolean firstPacket = false;
-//
-////      Beginner ACK packet so first packet can be sent
-//            byte[] byteArray = new byte[6400];
-//            byteArray[4] = 0;
-//            ackMessageFromReceiever = new DatagramPacket(byteArray, byteArray.length, null, 0);
-//
-//            byte expectedSeqNum = 0;
-//
-//
-//            while (true) {
-//
-//
-//                while (!sendBuffer.isEmpty()) {
-//                    currentPacket = sendBuffer.peek();
-//                    byte[] copyOfCurrentPacketData = currentPacket.getData();
-//                    String msgType = new String(Arrays.copyOfRange(copyOfCurrentPacketData, 0, 4));
-//
-//                    if (!msgType.equals("ACKm")) {
-//
-//                        //hold until receive ack or timer expires
-//                        while (ackMessageFromReceiever == null /*&& timer not expired yet*/) {}
-//
-//                        if (ackMessageFromReceiever == null || ackMessageFromReceiever.getData()[4] != expectedSeqNum) {
-//                            socket.send(lastPacketSent);
-//                        } else if (ackMessageFromReceiever != null && ackMessageFromReceiever.getData()[4] == expectedSeqNum) {
-//                                copyOfCurrentPacketData[4] = expectedSeqNum;
-//                                expectedSeqNum = (expectedSeqNum == 0) ? (byte) 1 : 0;
-//                                currentPacket.setData(copyOfCurrentPacketData);
-//                                socket.send(currentPacket);
-//                                lastPacketSent = currentPacket;
-//                                sendBuffer.remove();
-//                                ackMessageFromReceiever = null;
-//                        }
-//                    }
-//                }
-//            }
-        }catch(Exception e){
 
+    public void sendPacket(DatagramPacket packetToSend){
+        byte[] receivedData = packetToSend.getData();
+        String msgType = new String(Arrays.copyOfRange(receivedData, 0, 4));
+        byte[] senderNameBytes = trim(Arrays.copyOfRange(receivedData, 30, 46));
+        String senderName = new String(senderNameBytes);
+        byte[] destNameBytes = trim(Arrays.copyOfRange(receivedData, 46, 62));
+        String destName = new String(destNameBytes);
+
+        try {
+            socket.send(packetToSend);
+            System.out.println(senderName + " sent " + msgType + " packet to " + destName);
+        } catch(IOException e) {
+            System.out.println(e.getMessage());
         }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//        while (true) {
-//
-//            if (!sendBuffer.isEmpty()) {
-//                sendPacket = sendBuffer.peek();
-//                sendData = sendPacket.getData();
-//
-//                byte[] receivedData = sendPacket.getData();
-//                String msgType = new String(Arrays.copyOfRange(receivedData, 0, 4));
-//
-//
-//                if (msgType.equals("ACKm")) {
-//
-//
-//                    socket.send(sendPacket);
-//
-//                } else {
-//
-//
-//                    while (ackMessageFromReceiever == null) { }
-//
-//                    byte ackSequenceNumber = ackMessageFromReceiever.getData()[4];
-//
-//
-//                    if (ackSequenceNumber == expectedSeqNum) {
-//
-//                        sendData[4] = expectedSeqNum;
-//                        sendPacket.setData(sendData);
-//                        socket.send(sendPacket);
-//                        expectedSeqNum = (expectedSeqNum == 0) ? (byte) 1 : 0;
-//                        sendBuffer.remove();
-//                        ackMessageFromReceiever = null;
-//
-//
-//                    }
-//
-//                }
-//
-//                }
-//            } else {
-//                while (ackMessageFromReceiever == null) { }
-//
-//                byte ackSequenceNumber = ackMessageFromReceiever.getData()[4];
-//                if (ackSequenceNumber == expectedSeqNum) {
-//                    expectedSeqNum = (expectedSeqNum == 0) ? (byte) 1 : 0;
-//                    ackMessageFromReceiever = null;
-//                }
-//
-//
-//            }
-//
-//        }
-
-
-
-
-
-
-
-
-
-//        //                      If wrong sequence number (ack got dropped) send ack again
-//        if (ackSequenceNumber != sequenceNumber) {
-//            byte[] receivedData = ackMessage.getData();
-//            byte[] senderNameBytes = trim(Arrays.copyOfRange(receivedData, 30, 46));
-//            String senderName = new String(senderNameBytes);
-//            MyNode destNode = knownNodes.get(senderName);
-//            byte[] destIP = convertIPtoByteArr(destNode.getIP());
-//            InetAddress destIPAddress = InetAddress.getByAddress(destIP);
-//            byte[] ackMsg = prepareHeader(destNode.getName(), "ACKm");
-//            //Set sequence number
-//            ackMsg[4] = receivedData[4];
-//            DatagramPacket ackPacket = new DatagramPacket(ackMsg, ackMsg.length, destIPAddress, destNode.getPort());
-//            sendBuffer.add(ackPacket);
-//            ackMessage = null;
-//            break;
-//        } else {
-//            sendData[4] = sequenceNumber;
-//            sendPacket.setData(sendData);
-//            socket.send(sendPacket);
-//            sendBuffer.remove();
-//            sequenceNumber = (sequenceNumber == 0) ? (byte) 1 : 0;
-//            ackMessage = null;
-//            break;
-//        }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
 
     public byte[] prepareHeader(String destNode, String msgtype) {
