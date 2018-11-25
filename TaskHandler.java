@@ -387,7 +387,7 @@ public class TaskHandler implements Runnable{
 
 
                     } else if (msgType.equals("Kcon")) {
-                        keepAliveMap.put(destName, true);
+                        keepAliveMap.put(senderName, true);
 
                     } else if (msgType.equals("ACKm")){
                         ackMessageFromReceiever = receivePacket;
