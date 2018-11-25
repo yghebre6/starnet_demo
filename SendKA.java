@@ -105,6 +105,7 @@ public class SendKA implements Runnable {
         knownNodes.remove(nodeName);
         rttVector.remove(nodeName);
         rttSums.remove(nodeName);
+        keepAliveMap.remove(nodeName);
     }
 
 
@@ -113,6 +114,7 @@ public class SendKA implements Runnable {
         knownNodes.remove(nodeName);
         rttVector.remove(nodeName);
         rttSums.remove(nodeName);
+        keepAliveMap.remove(nodeName);
         hub.setIp("null");
         hub.setName("null");
         hub.setPort(0);

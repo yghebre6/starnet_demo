@@ -371,18 +371,21 @@ public class TaskHandler implements Runnable{
                         rttSums.remove(senderName);
 
                     } else if (msgType.equals("Kpro")) {
+
+
                         //respond back with "Kcon"
-                        receivedData[1] = 'c';
-                        receivedData[2] = 'o';
-                        receivedData[3] = 'n';
+                        byte[] toSend = prepareHeader(senderName, "Kcon");
 
                         // read star node name from messageBytes to get IP and port
                         byte[] ipAsByteArr = convertIPtoByteArr(knownNodes.get(senderName).getIP());
                         InetAddress ipAddress = InetAddress.getByAddress(ipAsByteArr);
                         int port = knownNodes.get(senderName).getPort();
 
-                        DatagramPacket sendPacket = new DatagramPacket(receivedData, receivedData.length, ipAddress, port);
+                        DatagramPacket sendPacket = new DatagramPacket(toSend, toSend.length, ipAddress, port);
                         sendBuffer.add(sendPacket);
+
+
+
                     } else if (msgType.equals("Kcon")) {
                         keepAliveMap.put(destName, true);
 
